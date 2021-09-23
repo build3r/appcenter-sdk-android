@@ -52,6 +52,7 @@ android {
             path "Android.mk"
         }
     }
+    ndkVersion '21.3.6528147'
 }
 
 repositories {

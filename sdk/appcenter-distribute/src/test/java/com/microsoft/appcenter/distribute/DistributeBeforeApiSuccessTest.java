@@ -5,51 +5,6 @@
 
 package com.microsoft.appcenter.distribute;
 
-import android.app.Activity;
-import android.app.Dialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.net.Uri;
-
-import com.microsoft.appcenter.channel.Channel;
-import com.microsoft.appcenter.distribute.ingestion.models.DistributionStartSessionLog;
-import com.microsoft.appcenter.http.HttpClient;
-import com.microsoft.appcenter.http.HttpException;
-import com.microsoft.appcenter.http.HttpResponse;
-import com.microsoft.appcenter.http.ServiceCall;
-import com.microsoft.appcenter.http.ServiceCallback;
-import com.microsoft.appcenter.utils.HandlerUtils;
-import com.microsoft.appcenter.utils.async.AppCenterConsumer;
-import com.microsoft.appcenter.utils.context.SessionContext;
-import com.microsoft.appcenter.utils.crypto.CryptoUtils;
-import com.microsoft.appcenter.utils.storage.SharedPreferencesManager;
-
-import org.json.JSONException;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatcher;
-import org.mockito.internal.util.reflection.Whitebox;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import org.mockito.verification.VerificationMode;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-
-import java.net.URISyntaxException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.net.ssl.SSLPeerUnverifiedException;
-
 import static com.microsoft.appcenter.Flags.DEFAULTS;
 import static com.microsoft.appcenter.distribute.DistributeConstants.PARAMETER_ENABLE_UPDATE_SETUP_FAILURE_REDIRECT_KEY;
 import static com.microsoft.appcenter.distribute.DistributeConstants.PARAMETER_INSTALL_ID;
@@ -91,6 +46,50 @@ import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.verifyStatic;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
+
+import android.app.Activity;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+
+import com.microsoft.appcenter.channel.Channel;
+import com.microsoft.appcenter.distribute.ingestion.models.DistributionStartSessionLog;
+import com.microsoft.appcenter.http.HttpClient;
+import com.microsoft.appcenter.http.HttpException;
+import com.microsoft.appcenter.http.HttpResponse;
+import com.microsoft.appcenter.http.ServiceCall;
+import com.microsoft.appcenter.http.ServiceCallback;
+import com.microsoft.appcenter.utils.HandlerUtils;
+import com.microsoft.appcenter.utils.async.AppCenterConsumer;
+import com.microsoft.appcenter.utils.context.SessionContext;
+import com.microsoft.appcenter.utils.crypto.CryptoUtils;
+import com.microsoft.appcenter.utils.storage.SharedPreferencesManager;
+
+import org.json.JSONException;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatcher;
+import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.mockito.verification.VerificationMode;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+
+import java.net.URISyntaxException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
 
 /**
  * Cover scenarios that are happening before we see an API call success for latest release.
@@ -198,11 +197,11 @@ public class DistributeBeforeApiSuccessTest extends AbstractDistributeTest {
         }), anyString(), eq(headers), any(HttpClient.CallTemplate.class), any(ServiceCallback.class));
     }
 
-    @Test
+ /*   @Test
     public void doNothingIfInstallComesFromStore() throws PackageManager.NameNotFoundException {
         when(InstallerUtils.isInstalledFromAppStore(anyString(), any(Context.class))).thenReturn(true);
         testDistributeInactiveOnPrivateTrack();
-    }
+    }*/
 
     @Test
     public void doNothingIfUpdateSetupFailedMessageExist() throws PackageManager.NameNotFoundException {

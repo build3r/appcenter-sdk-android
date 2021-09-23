@@ -5,73 +5,7 @@
 
 package com.microsoft.appcenter.distribute;
 
-import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.DownloadManager;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.ActivityNotFoundException;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.Build;
-import android.provider.Settings;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.UiThread;
-import androidx.annotation.VisibleForTesting;
-import androidx.annotation.WorkerThread;
-import android.text.TextUtils;
-import android.widget.Toast;
-
-import com.microsoft.appcenter.AbstractAppCenterService;
-import com.microsoft.appcenter.DependencyConfiguration;
-import com.microsoft.appcenter.Flags;
-import com.microsoft.appcenter.channel.Channel;
-import com.microsoft.appcenter.distribute.channel.DistributeInfoTracker;
-import com.microsoft.appcenter.distribute.download.ReleaseDownloader;
-import com.microsoft.appcenter.distribute.download.ReleaseDownloaderFactory;
-import com.microsoft.appcenter.distribute.ingestion.DistributeIngestion;
-import com.microsoft.appcenter.distribute.ingestion.models.DistributionStartSessionLog;
-import com.microsoft.appcenter.distribute.ingestion.models.json.DistributionStartSessionLogFactory;
-import com.microsoft.appcenter.http.HttpClient;
-import com.microsoft.appcenter.http.HttpException;
-import com.microsoft.appcenter.http.HttpResponse;
-import com.microsoft.appcenter.http.HttpUtils;
-import com.microsoft.appcenter.http.ServiceCall;
-import com.microsoft.appcenter.http.ServiceCallback;
-import com.microsoft.appcenter.ingestion.models.json.LogFactory;
-import com.microsoft.appcenter.utils.AppCenterLog;
-import com.microsoft.appcenter.utils.AppNameHelper;
-import com.microsoft.appcenter.utils.DeviceInfoHelper;
-import com.microsoft.appcenter.utils.HandlerUtils;
-import com.microsoft.appcenter.utils.IdHelper;
-import com.microsoft.appcenter.utils.NetworkStateHelper;
-import com.microsoft.appcenter.utils.async.AppCenterConsumer;
-import com.microsoft.appcenter.utils.async.AppCenterFuture;
-import com.microsoft.appcenter.utils.context.SessionContext;
-import com.microsoft.appcenter.utils.crypto.CryptoUtils;
-import com.microsoft.appcenter.utils.storage.SharedPreferencesManager;
-
-import org.json.JSONException;
-
-import java.lang.ref.WeakReference;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
 import static android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE;
-import static android.util.Log.VERBOSE;
 import static com.microsoft.appcenter.distribute.DistributeConstants.DEFAULT_API_URL;
 import static com.microsoft.appcenter.distribute.DistributeConstants.DEFAULT_INSTALL_URL;
 import static com.microsoft.appcenter.distribute.DistributeConstants.DOWNLOAD_STATE_AVAILABLE;
@@ -105,8 +39,69 @@ import static com.microsoft.appcenter.distribute.DistributeConstants.PREFERENCE_
 import static com.microsoft.appcenter.distribute.DistributeConstants.SERVICE_NAME;
 import static com.microsoft.appcenter.distribute.DistributeUtils.computeReleaseHash;
 import static com.microsoft.appcenter.distribute.DistributeUtils.getStoredDownloadState;
-import static com.microsoft.appcenter.http.DefaultHttpClient.METHOD_GET;
-import static com.microsoft.appcenter.http.HttpUtils.createHttpClient;
+
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.DownloadManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.ActivityNotFoundException;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
+import android.text.TextUtils;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
+import androidx.annotation.VisibleForTesting;
+import androidx.annotation.WorkerThread;
+
+import com.microsoft.appcenter.AbstractAppCenterService;
+import com.microsoft.appcenter.Flags;
+import com.microsoft.appcenter.channel.Channel;
+import com.microsoft.appcenter.distribute.channel.DistributeInfoTracker;
+import com.microsoft.appcenter.distribute.download.ReleaseDownloader;
+import com.microsoft.appcenter.distribute.download.ReleaseDownloaderFactory;
+import com.microsoft.appcenter.distribute.ingestion.DistributeIngestion;
+import com.microsoft.appcenter.distribute.ingestion.models.DistributionStartSessionLog;
+import com.microsoft.appcenter.distribute.ingestion.models.json.DistributionStartSessionLogFactory;
+import com.microsoft.appcenter.http.HttpException;
+import com.microsoft.appcenter.http.HttpResponse;
+import com.microsoft.appcenter.http.HttpUtils;
+import com.microsoft.appcenter.http.ServiceCall;
+import com.microsoft.appcenter.http.ServiceCallback;
+import com.microsoft.appcenter.ingestion.models.json.LogFactory;
+import com.microsoft.appcenter.utils.AppCenterLog;
+import com.microsoft.appcenter.utils.AppNameHelper;
+import com.microsoft.appcenter.utils.DeviceInfoHelper;
+import com.microsoft.appcenter.utils.HandlerUtils;
+import com.microsoft.appcenter.utils.IdHelper;
+import com.microsoft.appcenter.utils.NetworkStateHelper;
+import com.microsoft.appcenter.utils.async.AppCenterConsumer;
+import com.microsoft.appcenter.utils.async.AppCenterFuture;
+import com.microsoft.appcenter.utils.context.SessionContext;
+import com.microsoft.appcenter.utils.crypto.CryptoUtils;
+import com.microsoft.appcenter.utils.storage.SharedPreferencesManager;
+
+import org.json.JSONException;
+
+import java.lang.ref.WeakReference;
+import java.net.URISyntaxException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Distribute service.
@@ -748,14 +743,14 @@ public class Distribute extends AbstractAppCenterService {
                 mManualCheckForUpdateRequested = false;
                 return;
             }
-
+            //skip checking for app install
             /* Don't go any further if the app was installed from an app store. */
-            if (InstallerUtils.isInstalledFromAppStore(LOG_TAG, mContext)) {
+         /*   if (InstallerUtils.isInstalledFromAppStore(LOG_TAG, mContext)) {
                 AppCenterLog.info(LOG_TAG, "Not checking in app updates as installed from a store.");
                 mWorkflowCompleted = true;
                 mManualCheckForUpdateRequested = false;
                 return;
-            }
+            }*/
 
             /*
              * If failed to enable in-app updates on the same app build before, don't go any further.

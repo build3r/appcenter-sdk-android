@@ -17,14 +17,14 @@ def getVersionName = { ->
 }
 
 def getArtificatId = { ->
-    return "shabaz-distribute" // Replace with library name ID
+    return "appcenter-distribute" // Replace with library name ID
 }
 
 publishing {
     publications {
         bar(MavenPublication) {
             groupId 'com.microsoft.appcenter' // Replace with group ID
-            artifactId getArtificatId()
+            artifactId "shabaz-${getArtificatId()}"
             version getVersionName()
             artifact("$buildDir/outputs/aar/${getArtificatId()}-release.aar")
         }

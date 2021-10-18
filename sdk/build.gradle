@@ -59,17 +59,17 @@ subprojects {
         }
 
         testOptions {
-            unitTests {
+          /*  unitTests {
                 all {
                     jvmArgs '-noverify'
                 }
                 returnDefaultValues = true
-            }
+            }*/
         }
 
         lintOptions {
-            explainIssues true
-            textReport true
+          /*  explainIssues true
+            textReport true*/
         }
     }
 
@@ -90,7 +90,6 @@ subprojects {
         testImplementation 'org.powermock:powermock-module-junit4:1.6.5'
         testImplementation 'org.powermock:powermock-module-junit4-rule-agent:1.6.5'
         testImplementation "androidx.annotation:annotation:${ext.annotationVersion}"
-        testImplementation project(':test')
 
         androidTestImplementation 'com.crittercism.dexmaker:dexmaker-dx:1.4'
         androidTestImplementation 'com.crittercism.dexmaker:dexmaker-mockito:1.4'
@@ -100,7 +99,6 @@ subprojects {
         androidTestImplementation ("androidx.annotation:annotation:${ext.annotationVersion}") {
             force = true
         }
-        androidTestImplementation project(':test')
     }
 
     task coverageReport(type: JacocoReport, dependsOn: ['createDebugCoverageReport', 'testDebugUnitTest']) {

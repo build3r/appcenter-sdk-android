@@ -5,28 +5,31 @@
 
 package com.microsoft.appcenter.distribute;
 
-import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.UiThread;
-import androidx.annotation.WorkerThread;
-import android.widget.Toast;
-
-import com.microsoft.appcenter.distribute.download.ReleaseDownloader;
-import com.microsoft.appcenter.utils.AppCenterLog;
-import com.microsoft.appcenter.utils.HandlerUtils;
-
-import java.text.NumberFormat;
-import java.util.Locale;
-
 import static com.microsoft.appcenter.distribute.DistributeConstants.HANDLER_TOKEN_CHECK_PROGRESS;
 import static com.microsoft.appcenter.distribute.DistributeConstants.KIBIBYTE_IN_BYTES;
 import static com.microsoft.appcenter.distribute.DistributeConstants.LOG_TAG;
 import static com.microsoft.appcenter.distribute.DistributeConstants.MEBIBYTE_IN_BYTES;
 import static com.microsoft.appcenter.distribute.InstallerUtils.getInstallIntent;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
+import androidx.annotation.WorkerThread;
+import androidx.core.content.FileProvider;
+
+import com.microsoft.appcenter.distribute.download.ReleaseDownloader;
+import com.microsoft.appcenter.utils.AppCenterLog;
+import com.microsoft.appcenter.utils.HandlerUtils;
+
+import java.io.File;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 /**
  * Listener for downloading progress.
@@ -42,12 +45,6 @@ class ReleaseDownloadListener implements ReleaseDownloader.Listener {
      * Private field to store information about release we are currently working with.
      */
     private final ReleaseDetails mReleaseDetails;
-
-    ReleaseDownloadListener(@NonNull Context context, @NonNull ReleaseDetails releaseDetails) {
-        mContext = context;
-        mReleaseDetails = releaseDetails;
-    }
-
     /**
      * Last download progress dialog that was shown.
      * Android 8 deprecates this dialog but only reason is that they want us to use a non modal
@@ -56,6 +53,11 @@ class ReleaseDownloadListener implements ReleaseDownloader.Listener {
      */
     @SuppressWarnings({"deprecation", "RedundantSuppression"})
     private android.app.ProgressDialog mProgressDialog;
+
+    ReleaseDownloadListener(@NonNull Context context, @NonNull ReleaseDetails releaseDetails) {
+        mContext = context;
+        mReleaseDetails = releaseDetails;
+    }
 
     @WorkerThread
     @Override
@@ -92,7 +94,11 @@ class ReleaseDownloadListener implements ReleaseDownloader.Listener {
     @WorkerThread
     @Override
     public boolean onComplete(@NonNull final Uri localUri) {
-        final Intent intent = getInstallIntent(localUri);
+        AppCenterLog.debug("uri", localUri.toString());
+        Uri apkURI = FileProvider.getUriForFile(
+                mContext, mContext.getApplicationContext()
+                        .getPackageName() + ".provider", new File(localUri.getPath()));
+        final Intent intent = getInstallIntent(apkURI);
         if (intent.resolveActivity(mContext.getPackageManager()) == null) {
             AppCenterLog.debug(LOG_TAG, "Cannot resolve install intent for " + localUri);
             return false;

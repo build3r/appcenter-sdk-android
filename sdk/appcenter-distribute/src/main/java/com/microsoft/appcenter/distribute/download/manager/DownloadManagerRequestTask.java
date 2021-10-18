@@ -5,15 +5,18 @@
 
 package com.microsoft.appcenter.distribute.download.manager;
 
+import static com.microsoft.appcenter.distribute.DistributeConstants.LOG_TAG;
+
 import android.app.DownloadManager;
+import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Environment;
+
 import androidx.annotation.VisibleForTesting;
 
 import com.microsoft.appcenter.distribute.ReleaseDetails;
 import com.microsoft.appcenter.utils.AppCenterLog;
-
-import static com.microsoft.appcenter.distribute.DistributeConstants.LOG_TAG;
 
 /**
  * The download manager API triggers strict mode exception in UI thread.
@@ -22,8 +25,10 @@ class DownloadManagerRequestTask extends AsyncTask<Void, Void, Void> {
 
     private final DownloadManagerReleaseDownloader mDownloader;
     private final String mTitle;
+    private final Context mContext;
 
-    DownloadManagerRequestTask(DownloadManagerReleaseDownloader downloader, String title) {
+    DownloadManagerRequestTask(Context context, DownloadManagerReleaseDownloader downloader, String title) {
+        mContext = context;
         mDownloader = downloader;
         mTitle = title;
     }
@@ -44,6 +49,11 @@ class DownloadManagerRequestTask extends AsyncTask<Void, Void, Void> {
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN);
             request.setVisibleInDownloadsUi(false);
         }
+        request.setDestinationInExternalFilesDir(mContext, Environment.DIRECTORY_DOWNLOADS, "app.apk");
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
+        request.setVisibleInDownloadsUi(true);
+        request.setDescription("Downloading Update");// Description of the Download Notification
+
         long enqueueTime = System.currentTimeMillis();
         try {
             long downloadId = downloadManager.enqueue(request);

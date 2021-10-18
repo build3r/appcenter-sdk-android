@@ -5,12 +5,20 @@
 
 package com.microsoft.appcenter.distribute.download.manager;
 
+import static android.content.Context.DOWNLOAD_SERVICE;
+import static com.microsoft.appcenter.distribute.DistributeConstants.HANDLER_TOKEN_CHECK_PROGRESS;
+import static com.microsoft.appcenter.distribute.DistributeConstants.INVALID_DOWNLOAD_IDENTIFIER;
+import static com.microsoft.appcenter.distribute.DistributeConstants.LOG_TAG;
+import static com.microsoft.appcenter.distribute.DistributeConstants.PREFERENCE_KEY_DOWNLOAD_ID;
+import static com.microsoft.appcenter.distribute.DistributeConstants.UPDATE_PROGRESS_TIME_THRESHOLD;
+
 import android.app.DownloadManager;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
+
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
@@ -22,13 +30,6 @@ import com.microsoft.appcenter.utils.AppCenterLog;
 import com.microsoft.appcenter.utils.AsyncTaskUtils;
 import com.microsoft.appcenter.utils.HandlerUtils;
 import com.microsoft.appcenter.utils.storage.SharedPreferencesManager;
-
-import static android.content.Context.DOWNLOAD_SERVICE;
-import static com.microsoft.appcenter.distribute.DistributeConstants.HANDLER_TOKEN_CHECK_PROGRESS;
-import static com.microsoft.appcenter.distribute.DistributeConstants.INVALID_DOWNLOAD_IDENTIFIER;
-import static com.microsoft.appcenter.distribute.DistributeConstants.LOG_TAG;
-import static com.microsoft.appcenter.distribute.DistributeConstants.PREFERENCE_KEY_DOWNLOAD_ID;
-import static com.microsoft.appcenter.distribute.DistributeConstants.UPDATE_PROGRESS_TIME_THRESHOLD;
 
 public class DownloadManagerReleaseDownloader extends AbstractReleaseDownloader {
 
@@ -118,7 +119,7 @@ public class DownloadManagerReleaseDownloader extends AbstractReleaseDownloader 
             AppCenterLog.debug(LOG_TAG, "Downloading is already in progress.");
             return;
         }
-        mRequestTask = AsyncTaskUtils.execute(LOG_TAG, new DownloadManagerRequestTask(this, mContext.getString(R.string.appcenter_distribute_downloading_version)));
+        mRequestTask = AsyncTaskUtils.execute(LOG_TAG, new DownloadManagerRequestTask(mContext, this, mContext.getString(R.string.appcenter_distribute_downloading_version)));
     }
 
     /**

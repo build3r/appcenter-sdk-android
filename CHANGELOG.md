@@ -1,5 +1,14 @@
 # App Center SDK for Android Change Log
 
+## Version 4.3.2 (Under active development)
+* **[Feature]** Added InApp update support for more local installers 
+
+### App Center
+
+* **[Breaking change]** Remove `AppCenter.setCustomProperties` API.
+* **[Fix]** Remove `android.support.test.InstrumentationRegistry` string that caused an error when checking applications on availability of android support libraries.
+___
+
 ## Version 4.3.1
 
 ### App Center

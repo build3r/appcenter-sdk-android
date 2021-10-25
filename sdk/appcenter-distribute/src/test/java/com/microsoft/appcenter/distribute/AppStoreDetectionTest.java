@@ -5,6 +5,13 @@
 
 package com.microsoft.appcenter.distribute;
 
+import static com.microsoft.appcenter.distribute.DistributeConstants.LOG_TAG;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import android.content.Context;
 import android.content.pm.PackageManager;
 
@@ -16,15 +23,7 @@ import org.mockito.Mock;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.reflect.Whitebox;
 
-import static com.microsoft.appcenter.distribute.DistributeConstants.LOG_TAG;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.util.HashSet;
-import java.util.Set;
 
 @SuppressWarnings("CanBeFinal")
 @RunWith(PowerMockRunner.class)
@@ -80,6 +79,14 @@ public class AppStoreDetectionTest {
     @Test
     public void adbIsNotStore() {
         setInstallerPackageName("adb");
+
+        /* Check cache. */
+        verifyNotFromAppStore();
+    }
+
+    @Test
+    public void fileManagerIsNotStore() {
+        setInstallerPackageName("com.coloros.filemanager");
 
         /* Check cache. */
         verifyNotFromAppStore();

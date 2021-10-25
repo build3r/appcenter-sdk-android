@@ -8,8 +8,6 @@ package com.microsoft.appcenter.distribute.download.manager;
 import android.app.DownloadManager;
 import android.content.Context;
 import android.database.Cursor;
-import android.net.Uri;
-import android.os.Build;
 import android.os.SystemClock;
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
@@ -17,6 +15,7 @@ import androidx.annotation.WorkerThread;
 
 import com.microsoft.appcenter.distribute.R;
 import com.microsoft.appcenter.distribute.ReleaseDetails;
+import com.microsoft.appcenter.distribute.ReleaseInstallerListener;
 import com.microsoft.appcenter.distribute.download.AbstractReleaseDownloader;
 import com.microsoft.appcenter.utils.AppCenterLog;
 import com.microsoft.appcenter.utils.AsyncTaskUtils;
@@ -32,8 +31,8 @@ import static com.microsoft.appcenter.distribute.DistributeConstants.UPDATE_PROG
 
 public class DownloadManagerReleaseDownloader extends AbstractReleaseDownloader {
 
-    public DownloadManagerReleaseDownloader(@NonNull Context context, @NonNull ReleaseDetails releaseDetails, @NonNull Listener listener) {
-        super(context, releaseDetails, listener);
+    public DownloadManagerReleaseDownloader(@NonNull Context context, @NonNull ReleaseDetails releaseDetails, @NonNull Listener listener, @NonNull ReleaseInstallerListener releaseInstallerListener) {
+        super(context, releaseDetails, listener, releaseInstallerListener);
     }
 
     private long mDownloadId = INVALID_DOWNLOAD_IDENTIFIER;
@@ -178,23 +177,12 @@ public class DownloadManagerReleaseDownloader extends AbstractReleaseDownloader 
     }
 
     @WorkerThread
-    synchronized void onDownloadComplete(Cursor cursor) {
+    synchronized void onDownloadComplete() {
         if (isCancelled()) {
             return;
         }
         AppCenterLog.debug(LOG_TAG, "Download was successful for id=" + mDownloadId);
-        Uri localUri = Uri.parse(cursor.getString(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI)));
-        boolean installerFound = false;
-        if (!mListener.onComplete(localUri)) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-                installerFound = mListener.onComplete(getFileUriOnOldDevices(cursor));
-            }
-        } else {
-            installerFound = true;
-        }
-        if (!installerFound) {
-            mListener.onError("Installer not found");
-        }
+        mListener.onComplete(mDownloadId, mReleaseInstallerListener);
     }
 
     @WorkerThread
@@ -204,10 +192,5 @@ public class DownloadManagerReleaseDownloader extends AbstractReleaseDownloader 
         }
         AppCenterLog.error(LOG_TAG, "Failed to download update id=" + mDownloadId, e);
         mListener.onError(e.getMessage());
-    }
-
-    @SuppressWarnings({"deprecation", "RedundantSuppression"})
-    private static Uri getFileUriOnOldDevices(Cursor cursor) throws IllegalArgumentException {
-        return Uri.parse("file://" + cursor.getString(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_FILENAME)));
     }
 }

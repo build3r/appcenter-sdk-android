@@ -1,10 +1,19 @@
 # App Center SDK for Android Change Log
 
-## Version 4.2.1 (Under active development)
+## Version 4.3.2 (Under active development)
 * **[Feature]** Added InApp update support for more local installers 
 
 ### App Center
 
+* **[Breaking change]** Remove `AppCenter.setCustomProperties` API.
+* **[Fix]** Remove `android.support.test.InstrumentationRegistry` string that caused an error when checking applications on availability of android support libraries.
+___
+
+## Version 4.3.1
+
+### App Center
+
+* **[Feature]** Add `Distribute.addStores(stores)` API for adding local stores or installers which should allow in-app updates.
 * **[Feature]** Improved `AES` token encryption algorithm using `Encrypt-then-MAC` data authentication approach.
 
 ### App Center Distribute

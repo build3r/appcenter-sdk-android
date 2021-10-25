@@ -5,6 +5,13 @@
 
 package com.microsoft.appcenter.distribute;
 
+import static com.microsoft.appcenter.distribute.DistributeConstants.LOG_TAG;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import android.content.Context;
 import android.content.pm.PackageManager;
 
@@ -16,12 +23,7 @@ import org.mockito.Mock;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.reflect.Whitebox;
 
-import static com.microsoft.appcenter.distribute.DistributeConstants.LOG_TAG;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import java.util.HashSet;
 
 @SuppressWarnings("CanBeFinal")
 @RunWith(PowerMockRunner.class)
@@ -101,6 +103,16 @@ public class AppStoreDetectionTest {
     @Test
     public void anotherLocalInstallerIsNotStore() {
         setInstallerPackageName("com.android.packageinstaller");
+
+        /* Check cache. */
+        verifyNotFromAppStore();
+    }
+
+    @Test
+    public void addNewLocalInstaller() {
+        final String testPackageName = "com.test.packageinstaller";
+        Distribute.addStores(new HashSet<String>() {{ add(testPackageName); }});
+        setInstallerPackageName(testPackageName);
 
         /* Check cache. */
         verifyNotFromAppStore();

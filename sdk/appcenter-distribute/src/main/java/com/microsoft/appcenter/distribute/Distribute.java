@@ -13,11 +13,11 @@ import android.app.DownloadManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -32,7 +32,6 @@ import android.text.TextUtils;
 import android.widget.Toast;
 
 import com.microsoft.appcenter.AbstractAppCenterService;
-import com.microsoft.appcenter.DependencyConfiguration;
 import com.microsoft.appcenter.Flags;
 import com.microsoft.appcenter.channel.Channel;
 import com.microsoft.appcenter.distribute.channel.DistributeInfoTracker;
@@ -41,7 +40,6 @@ import com.microsoft.appcenter.distribute.download.ReleaseDownloaderFactory;
 import com.microsoft.appcenter.distribute.ingestion.DistributeIngestion;
 import com.microsoft.appcenter.distribute.ingestion.models.DistributionStartSessionLog;
 import com.microsoft.appcenter.distribute.ingestion.models.json.DistributionStartSessionLogFactory;
-import com.microsoft.appcenter.http.HttpClient;
 import com.microsoft.appcenter.http.HttpException;
 import com.microsoft.appcenter.http.HttpResponse;
 import com.microsoft.appcenter.http.HttpUtils;
@@ -64,13 +62,12 @@ import org.json.JSONException;
 
 import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE;
-import static android.util.Log.VERBOSE;
 import static com.microsoft.appcenter.distribute.DistributeConstants.DEFAULT_API_URL;
 import static com.microsoft.appcenter.distribute.DistributeConstants.DEFAULT_INSTALL_URL;
 import static com.microsoft.appcenter.distribute.DistributeConstants.DOWNLOAD_STATE_AVAILABLE;
@@ -104,8 +101,6 @@ import static com.microsoft.appcenter.distribute.DistributeConstants.PREFERENCE_
 import static com.microsoft.appcenter.distribute.DistributeConstants.SERVICE_NAME;
 import static com.microsoft.appcenter.distribute.DistributeUtils.computeReleaseHash;
 import static com.microsoft.appcenter.distribute.DistributeUtils.getStoredDownloadState;
-import static com.microsoft.appcenter.http.DefaultHttpClient.METHOD_GET;
-import static com.microsoft.appcenter.http.HttpUtils.createHttpClient;
 
 /**
  * Distribute service.
@@ -246,6 +241,21 @@ public class Distribute extends AbstractAppCenterService {
     private ReleaseDownloadListener mReleaseDownloaderListener;
 
     /**
+     * Install release listener.
+     */
+    private ReleaseInstallerListener mReleaseInstallerListener;
+
+    /**
+     * Receiver of installing a new release.
+     */
+    private AppCenterPackageInstallerReceiver mAppCenterPackageInstallerReceiver;
+
+    /**
+     * Intent filter of receiver for a new release.
+     */
+    private IntentFilter mPackageInstallerReceiverFilter;
+
+    /**
      * Remember if we checked download since our own process restarted.
      */
     private boolean mCheckedDownload;
@@ -296,6 +306,10 @@ public class Distribute extends AbstractAppCenterService {
     private Distribute() {
         mFactories = new HashMap<>();
         mFactories.put(DistributionStartSessionLog.TYPE, new DistributionStartSessionLogFactory());
+        mAppCenterPackageInstallerReceiver = new AppCenterPackageInstallerReceiver();
+        mPackageInstallerReceiverFilter = new IntentFilter();
+        mPackageInstallerReceiverFilter.addAction(AppCenterPackageInstallerReceiver.START_ACTION);
+        mPackageInstallerReceiverFilter.addAction(AppCenterPackageInstallerReceiver.MY_PACKAGE_REPLACED_ACTION);
     }
 
     /**
@@ -353,6 +367,15 @@ public class Distribute extends AbstractAppCenterService {
      */
     public static void setApiUrl(String apiUrl) {
         getInstance().setInstanceApiUrl(apiUrl);
+    }
+
+    /**
+     * Add stores allowed to perform in-app updates.
+     *
+     * @param stores list of stores allowed to perform in-app updates.
+     */
+    public static void addStores(Set<String> stores) {
+        InstallerUtils.addLocalStores(stores);
     }
 
     /**
@@ -506,6 +529,14 @@ public class Distribute extends AbstractAppCenterService {
     }
 
     @Override
+    public void onActivityStarted(Activity activity) {
+        super.onActivityStarted(activity);
+
+        /* Register package installer receiver. */
+        activity.registerReceiver(mAppCenterPackageInstallerReceiver, mPackageInstallerReceiverFilter);
+    }
+
+    @Override
     public synchronized void onActivityResumed(Activity activity) {
         mForegroundActivity = activity;
 
@@ -523,6 +554,14 @@ public class Distribute extends AbstractAppCenterService {
         if (mReleaseDownloaderListener != null) {
             mReleaseDownloaderListener.hideProgressDialog();
         }
+    }
+
+    @Override
+    public void onActivityStopped(Activity activity) {
+        super.onActivityStopped(activity);
+
+        /* Unregister package installer receiver. */
+        activity.unregisterReceiver(mAppCenterPackageInstallerReceiver);
     }
 
     @Override
@@ -1000,6 +1039,9 @@ public class Distribute extends AbstractAppCenterService {
         if (mReleaseDownloaderListener != null) {
             mReleaseDownloaderListener.hideProgressDialog();
         }
+        if (mReleaseInstallerListener != null) {
+            mReleaseInstallerListener.hideInstallProgressDialog();
+        }
         mWorkflowCompleted = true;
         mManualCheckForUpdateRequested = false;
     }
@@ -1258,18 +1300,23 @@ public class Distribute extends AbstractAppCenterService {
         } else if (releaseDetails == null) {
 
             /* When we disable the SDK or cancel every state, we need to clean download cache. */
-            ReleaseDownloaderFactory.create(mContext, null, null).cancel();
+            ReleaseDownloaderFactory.create(mContext, null, null, null).cancel();
         }
         if (mReleaseDownloaderListener != null) {
             mReleaseDownloaderListener.hideProgressDialog();
             mReleaseDownloaderListener = null;
+        }
+        if (mReleaseInstallerListener != null) {
+            mReleaseInstallerListener.hideInstallProgressDialog();
+            mReleaseInstallerListener = null;
         }
         mReleaseDetails = releaseDetails;
         if (mReleaseDetails != null) {
 
             /* Create release downloader here to be able correctly cancel downloading from previous runs. */
             mReleaseDownloaderListener = new ReleaseDownloadListener(mContext, mReleaseDetails);
-            mReleaseDownloader = ReleaseDownloaderFactory.create(mContext, mReleaseDetails, mReleaseDownloaderListener);
+            mReleaseInstallerListener = new ReleaseInstallerListener(mContext);
+            mReleaseDownloader = ReleaseDownloaderFactory.create(mContext, mReleaseDetails, mReleaseDownloaderListener, mReleaseInstallerListener);
         }
     }
 
@@ -1744,17 +1791,43 @@ public class Distribute extends AbstractAppCenterService {
         }
     }
 
+    @UiThread
+    synchronized void notifyInstallProgress(boolean isInProgress) {
+        if (isInProgress) {
+
+            /* Do not attempt to show dialog if application is in the background. */
+            if (mForegroundActivity == null) {
+                AppCenterLog.warn(LOG_TAG, "Could not display install progress dialog in the background.");
+                return;
+            }
+            if (mReleaseInstallerListener == null) {
+                return;
+            }
+
+            /* Close to avoid dialog duplicates. */
+            mReleaseInstallerListener.hideInstallProgressDialog();
+
+            /* Create and show a new dialog. */
+            Dialog progressDialog = mReleaseInstallerListener.showInstallProgressDialog(mForegroundActivity);
+            showAndRememberDialogActivity(progressDialog);
+        } else {
+            if (mReleaseInstallerListener != null) {
+                mReleaseInstallerListener.hideInstallProgressDialog();
+                mReleaseInstallerListener = null;
+            }
+        }
+    }
+
     /**
      * Post notification about a completed download if we are in background when download completes.
      * If this method is called on app process restart or if application is in foreground
      * when download completes, it will not notify and return that the install U.I. should be shown now.
      *
      * @param releaseDetails release details to check state.
-     * @param intent         prepared install intent.
      * @return false if install U.I should be shown now, true if a notification was posted or if the task was canceled.
      */
     @UiThread
-    synchronized boolean notifyDownload(ReleaseDetails releaseDetails, Intent intent) {
+    synchronized boolean notifyDownload(ReleaseDetails releaseDetails) {
 
         /* Check state. */
         if (releaseDetails != mReleaseDetails) {
@@ -1789,15 +1862,10 @@ public class Distribute extends AbstractAppCenterService {
         } else {
             builder = getOldNotificationBuilder();
         }
-        int pendingIntentFlag = 0;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            pendingIntentFlag = PendingIntent.FLAG_IMMUTABLE;
-        }
         builder.setTicker(mContext.getString(R.string.appcenter_distribute_install_ready_title))
                 .setContentTitle(mContext.getString(R.string.appcenter_distribute_install_ready_title))
                 .setContentText(getInstallReadyMessage())
-                .setSmallIcon(mContext.getApplicationInfo().icon)
-                .setContentIntent(PendingIntent.getActivities(mContext, 0, new Intent[]{intent}, pendingIntentFlag));
+                .setSmallIcon(mContext.getApplicationInfo().icon);
         builder.setStyle(new Notification.BigTextStyle().bigText(getInstallReadyMessage()));
         Notification notification = builder.build();
         notification.flags |= Notification.FLAG_AUTO_CANCEL;
